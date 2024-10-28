@@ -1,0 +1,76 @@
+import pandas as pd
+import numpy as np
+from pyts.image import GramianAngularField
+import os
+from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+# Load the dataset
+data = pd.read_csv('Power_Consumption/Tetuan City power consumption.csv')
+
+# Handle missing values with forward fill
+data = data.ffill()
+
+# Normalize power consumption features
+for zone in ['Zone 1 Power Consumption', 'Zone 2  Power Consumption', 'Zone 3  Power Consumption']:
+    if zone in data.columns:
+        data[zone] = (data[zone] - data[zone].mean()) / data[zone].std()
+
+# Function to introduce anomalies
+def introduce_anomalies(data, anomaly_ratio=0.01, severity=5):
+    data_anomalous = data.copy()
+    n_anomalies = int(len(data) * anomaly_ratio)
+
+    for zone in ['Zone 1 Power Consumption', 'Zone 2  Power Consumption', 'Zone 3  Power Consumption']:
+        if zone in data.columns:
+            anomaly_indices = np.random.choice(len(data), n_anomalies, replace=False)
+            data_anomalous.loc[anomaly_indices, zone] *= np.random.choice([severity, -severity], size=n_anomalies)
+
+    return data_anomalous
+
+# Create normal and anomalous datasets
+data_anomalous = introduce_anomalies(data, anomaly_ratio=0.02, severity=5)
+
+# Set parameters for GAF
+time_window = 128  # Updated to 128
+gaf = GramianAngularField(image_size=time_window)
+
+# Create directories for GAF images
+os.makedirs('GAF_Images/Normal', exist_ok=True)
+os.makedirs('GAF_Images/Anomalous', exist_ok=True)
+
+# Function to create and save GAF images with a limit on the number
+def create_gaf_images(data, label, max_images):
+    image_count = 0  # Track the number of images created
+    for zone in ['Zone 1 Power Consumption', 'Zone 2  Power Consumption', 'Zone 3  Power Consumption']:
+        if zone in data.columns:
+            zone_data = data[zone].values
+
+            # Create sliding windows and generate GAF images
+            for i in range(len(zone_data) - time_window + 1):
+                if image_count >= max_images:
+                    print(f"Reached the limit of {max_images} images for {label}.")
+                    return
+
+                segment = zone_data[i:i + time_window]
+                gaf_image = gaf.fit_transform(segment.reshape(1, -1))
+
+                # Apply 'jet' colormap and convert to RGB
+                colored_image = cm.get_cmap('jet')(gaf_image[0])[:, :, :3]  # RGB channels only
+                img = Image.fromarray((colored_image * 255).astype(np.uint8))
+
+                # Save the image
+                img.save(f'GAF_Images/{label}/{zone.replace(" ", "_")}_window_{i}.png')
+                image_count += 1
+
+    print(f"{image_count} {label} GAF images created.")
+
+# Generate and save the GAF images
+print("Generating GAF images for normal data...")
+create_gaf_images(data, label='Normal', max_images=500)
+
+print("Generating GAF images for anomalous data...")
+create_gaf_images(data_anomalous, label='Anomalous', max_images=100)
+
+print("GAF images for normal and anomalous data have been created and saved.")
