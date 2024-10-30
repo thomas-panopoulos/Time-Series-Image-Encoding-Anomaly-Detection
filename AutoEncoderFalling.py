@@ -176,6 +176,21 @@ anomaly_batch = next(anomaly_generator)[0]
 
 uninfected_values = calc_density_and_recon_error(train_batch)
 anomaly_values = calc_density_and_recon_error(anomaly_batch)
+
+############################################################################################
+'''
+def collect_all_images(generator):
+    all_images = []
+    generator.reset()  # Ensure generator starts from the beginning
+    for _ in range(len(generator)):
+        batch = next(generator)[0]  # Get the images (ignoring labels)
+        all_images.append(batch)
+    return np.concatenate(all_images, axis=0)  # Combine all batches into a single array
+
+# Collect all images from each dataset
+train_images = collect_all_images(train_generator)
+val_images = collect_all_images(validation_generator)
+anomaly_images = collect_all_images(anomaly_generator)
 print(f'normal: {uninfected_values}')
 print(f'anomalous: {anomaly_values}')
 
@@ -191,19 +206,11 @@ def calculate_reconstruction_error(batch_images, model):
         errors.append(recon_error)
     return errors
 
-# Get a batch of normal (training) images
-train_batch = next(train_generator)[0]
-
-# Get a batch of validation (normal) images
-val_batch = next(validation_generator)[0]
-
-# Get a batch of anomalous images
-anomaly_batch = next(anomaly_generator)[0]
 
 # Calculate reconstruction errors for each dataset
-train_errors = calculate_reconstruction_error(train_batch, model)
-val_errors = calculate_reconstruction_error(val_batch, model)
-anomaly_errors = calculate_reconstruction_error(anomaly_batch, model)
+train_errors = calculate_reconstruction_error(train_images, model)
+val_errors = calculate_reconstruction_error(val_images, model)
+anomaly_errors = calculate_reconstruction_error(anomaly_images, model)
 
 # Plotting the reconstruction errors
 plt.figure(figsize=(10, 6))
@@ -223,8 +230,8 @@ plt.title('Reconstruction Error Distribution')
 plt.legend(loc='upper right')
 
 plt.show()
-
-
+'''
+##################################################################################################
 # Function to classify an image as normal or anomaly
 
 
@@ -251,44 +258,18 @@ def check_anomaly(img_path):
     if (
         density < uninfected_values[0] - 100 * uninfected_values[1]
         or density > uninfected_values[0] + 100 * uninfected_values[1]
-        or recon_error > uninfected_values[2] + 100 * uninfected_values[3]
+        or recon_error > 0.006 
+        or recon_error < 0.0026
     ):
         return True  # Image is an anomaly
     else:
         return False
 
 
-
-'''def check_anomaly(img_path):
-    try:
-        # Open and resize the image with updated resampling
-        img = Image.open(img_path).resize((128, 128), Image.Resampling.LANCZOS)
-    except PermissionError as e:
-        print(f"Permission denied: {e}")
-        return False  # Return False for permission errors
-    except Exception as e:
-        print(f"Error opening image: {e}")
-        return False  # Return False for other errors
-    img = np.array(img)
-    print(f"Image shape: {img.shape}")  # Add this line to debug
-
-    img = np.array(img) / 255.0
-    img = img[np.newaxis, :, :, :]
-
-    encoded_img = encoder_model.predict(img)
-    encoded_img = [np.reshape(img, (out_vector_shape,)) for img in encoded_img]
-    density = kde.score_samples(encoded_img)[0]
-    reconstruction = model.predict(img)
-    recon_error = model.evaluate(reconstruction, img, batch_size=1)[0]
-
-    if density < uninfected_values[0] - 3 * uninfected_values[1] or density > uninfected_values[0] + 3 * uninfected_values[1] or recon_error > uninfected_values[2] + 3 * uninfected_values[3]:
-        return True  # Image is an anomaly
-    else:
-        return False  # Image is NOT an anomaly
-'''
 # Test the anomaly detection on all anomalous images
+
 anom_image_paths = glob.glob('GAF_IMG/ANOMALY/images/*')
-normal_file_paths = glob.glob('GAF_IMG/TEST/images/*')
+normal_file_paths = glob.glob('GAF_IMG/TRAIN/images/*')
 correctly_identified = 0
 false_id = 0
 for img_path in anom_image_paths:
@@ -319,3 +300,6 @@ if total_anomalies > 0:
     print(f"Correctly identified anomalies: {correctly_identified}/{total_anomalies} ({accuracy_percentage:.2f}%)")
 else:
     print("No anomalous images found for testing.")
+    
+
+

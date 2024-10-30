@@ -154,12 +154,82 @@ def calc_density_and_recon_error(batch_images):
 
 train_batch = next(train_generator)[0]
 anomaly_batch = next(anomaly_generator)[0]
-
+val_batch = next(validation_generator)[0]
 uninfected_values = calc_density_and_recon_error(train_batch)
 anomaly_values = calc_density_and_recon_error(anomaly_batch)
+
+
+#####################################################
+'''
+import matplotlib.pyplot as plt
+
+# Function to compute reconstruction error for a batch of images
+def calculate_reconstruction_error(batch_images, model):
+    errors = []
+    for img in batch_images:
+        img = img[np.newaxis, :, :, :]  # Add batch dimension
+        reconstruction = model.predict(img)
+        recon_error = model.evaluate(reconstruction, img, batch_size=1, verbose=0)[0]  # MSE error
+        errors.append(recon_error)
+    return errors
+
+# Get a batch of normal (training) images
+train_batch = next(train_generator)[0]
+
+# Get a batch of validation (normal) images
+val_batch = next(validation_generator)[0]
+
+# Get a batch of anomalous images
+anomaly_batch = next(anomaly_generator)[0]
+
+# Calculate reconstruction errors for each dataset
+train_errors = calculate_reconstruction_error(train_batch, model)
+val_errors = calculate_reconstruction_error(val_batch, model)
+anomaly_errors = calculate_reconstruction_error(anomaly_batch, model)
+
+# Plotting the reconstruction errors
+plt.figure(figsize=(10, 6))
+
+# Histogram for training set errors
+plt.hist(train_errors, bins=30, alpha=0.6, color='blue', label='Training Data')
+
+# Histogram for validation set errors
+plt.hist(val_errors, bins=30, alpha=0.6, color='green', label='Validation Data')
+
+# Histogram for anomaly set errors
+plt.hist(anomaly_errors, bins=30, alpha=0.6, color='red', label='Anomalous Data')
+
+plt.xlabel('Reconstruction Error')
+plt.ylabel('Frequency')
+plt.title('Reconstruction Error Distribution')
+plt.legend(loc='upper right')
+
+plt.show()
+
+
+def plot_kde(data, label, color):
+    errors = np.array(errors)[:, None]  # Reshape to 2D array for KDE
+    kde2 = KernelDensity(kernel='gaussian', bandwidth=0.5).fit(errors)  # Fit KDE to errors
+    x_d = np.linspace(min(data), max(data), 1000)
+    log_density = kde2.score_samples(x_d[:, None])
+    plt.plot(x_d, np.exp(log_density), color=color, label=label)
+
+# Plot the KDE of reconstruction errors
+plt.figure(figsize=(10, 6))
+
+plot_kde(train_errors, 'Training Data', 'blue')
+plot_kde(val_errors, 'Validation Data', 'green')
+plot_kde(anomaly_errors, 'Anomalous Data', 'red')
+
+plt.xlabel('Reconstruction Error')
+plt.ylabel('Density')
+plt.title('KDE of Reconstruction Errors')
+plt.legend(loc='upper right')
+plt.show()
+'''
+####################################################
 print(f'normal: {uninfected_values}')
 print(f'anomalous: {anomaly_values}')
-
 # Function to classify an image as normal or anomaly
 def check_anomaly(img_path):
     try:
@@ -187,6 +257,8 @@ def check_anomaly(img_path):
         return False  # Image is NOT an anomaly
 
 # Test the anomaly detection on all anomalous images
+
+'''
 anom_image_paths = glob.glob('GAF_Images/Anomalous/images/*')
 normal_file_paths = glob.glob('GAF_Images/Validation/images/*')
 correctly_identified = 0
@@ -219,3 +291,4 @@ if total_anomalies > 0:
     print(f"Correctly identified anomalies: {correctly_identified}/{total_anomalies} ({accuracy_percentage:.2f}%)")
 else:
     print("No anomalous images found for testing.")
+'''
